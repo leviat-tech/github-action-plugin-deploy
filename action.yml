@@ -1,0 +1,79 @@
+name: Deploy Plugin
+description: This action deploys preview branches to test when PR opened, deletes folder when PR closed
+  and automatically deploys to environment when associated branch is pushed to
+inputs:
+  ACTION_TYPE:
+    description: 'Must be one of: deploy-preview, release, delete-preview'
+    required: true
+    default: ''
+  AWS_REGION:
+    description: 'AWS region'
+    required: false
+    default: eu-central-1
+  AWS_ACCESS_KEY_ID:
+    description: 'AWS Access key id'
+    required: true
+    default: ''
+  AWS_ACCESS_KEY_SECRET:
+    description: 'AWS Access key secret'
+    required: true
+    default: ''
+  AWS_S3_BUCKET_PATH:
+    description: 'AWS S3 bucket path'
+    required: true
+    default: ''
+  NPM_AUTH_TOKEN:
+    description: 'Auth token to install private dependencies'
+    required: true
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Flatten ref
+      if: inputs.ACTION_TYPE != 'release'
+      id: flatten_ref
+      env:
+        ref: ${{ github.head_ref }}
+      run: echo "flattened_ref=${ref/\//--}" >> $GITHUB_OUTPUT
+
+    - uses: actions/checkout@v4
+      if: inputs.ACTION_TYPE != 'delete-preview'
+    - uses: actions/setup-node@v4
+      if: inputs.ACTION_TYPE != 'delete-preview'
+    - run: npm install
+      if: inputs.ACTION_TYPE != 'delete-preview'
+      env:
+        NPM_AUTH_TOKEN: ${{ inputs.NPM_AUTH_TOKEN }}
+    - run: npm run build
+      if: inputs.ACTION_TYPE != 'delete-preview'
+    - name: Deploy preview to S3
+      uses: leviat-tech/github-action-push-to-aws@v0.0.13
+      if: inputs.ACTION_TYPE != 'delete-preview'
+      with:
+        AWS_REGION: ${{ inputs.AWS_REGION }}
+        AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+        AWS_ACCESS_KEY_SECRET: ${{ inputs.AWS_ACCESS_KEY_SECRET }}
+        ACTION_TYPE: S3
+        S3_FOLDER_HERE: ./project/dist
+        S3_FOLDER_THERE: ${{ inputs.ACTION_TYPE == 'release' && inputs.AWS_S3_BUCKET_PATH || format('{0}/previews/{1}',  inputs.AWS_S3_BUCKET_PATH, needs.flatten_ref.outputs.flattened_ref) }}
+        S3_CREATE_INDEX: true
+
+    - name: Add link to PR
+      if: inputs.ACTION_TYPE == 'deploy-preview'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PREVIEW_URL: https://test.leviatdesignstudio.com/configurators/id/spa/?preview=${{ needs.flatten_ref.outputs.flattened_ref }}
+      run: gh pr comment ${{ github.event.number }} --body "This branch can be previewed at [$PREVIEW_URL]($PREVIEW_URL)"
+
+    - name: Delete preview folder from S3
+      uses: leviat-tech/github-action-push-to-aws@v0.0.13
+      if: inputs.ACTION_TYPE == 'delete-preview'
+      with:
+        AWS_REGION: ${{ inputs.AWS_REGION }}
+        AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+        AWS_ACCESS_KEY_SECRET: ${{ inputs.AWS_ACCESS_KEY_SECRET }}
+        ACTION_TYPE: S3
+        S3_FOLDER_THERE: ${{ inputs.AWS_S3_BUCKET_PATH }}/previews/${{ needs.flatten_ref.outputs.flattened_ref }}
+        S3_CREATE_INDEX: true
+        S3_CLEAR_ONLY: true
