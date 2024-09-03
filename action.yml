@@ -44,16 +44,22 @@ runs:
 
     - uses: actions/checkout@v4
       if: github.event.action != 'closed'
+
     - uses: actions/setup-node@v4
       if: github.event.action != 'closed'
+
     - run: npm install
       shell: bash
+      working-directory: project
       if: github.event.action != 'closed'
       env:
         NPM_AUTH_TOKEN: ${{ inputs.NPM_AUTH_TOKEN }}
+
     - run: npm run build
       shell: bash
+      working-directory: project
       if: github.event.action != 'closed'
+
     - name: Deploy preview to S3
       if: github.event.action != 'closed'
       uses: leviat-tech/github-action-push-to-aws@v0.0.13
