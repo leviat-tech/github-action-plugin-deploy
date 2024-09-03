@@ -78,7 +78,11 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
         PREVIEW_URL: https://test.leviatdesignstudio.com/configurators/id/${{ inputs.PLUGIN_NAME }}/?preview=${{ env.FLATTENED_REF }}
-      run: gh pr comment ${{ github.event.number }} --body "Deployment successful. This branch can be previewed at:\n\n[$PREVIEW_URL]($PREVIEW_URL)"
+      run: |
+        gh pr comment ${{ github.event.number }} \
+        --body "Deployment successful. This branch can be previewed at:
+        
+        [$PREVIEW_URL]($PREVIEW_URL)"
 
     - name: Delete preview folder from S3
       if: github.event.action == 'closed'
