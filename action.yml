@@ -73,7 +73,7 @@ runs:
         S3_CREATE_INDEX: true
 
     - name: Add link to PR
-      if: github.event.action == 'closed'
+      if: github.event.action != 'closed'
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
