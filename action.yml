@@ -55,8 +55,9 @@ runs:
       shell: bash
       if: github.event.action != 'closed'
     - name: Deploy preview to S3
-      uses: leviat-tech/github-action-push-to-aws@v0.0.13
       if: github.event.action != 'closed'
+      needs: flatten_ref
+      uses: leviat-tech/github-action-push-to-aws@v0.0.13
       with:
         AWS_REGION: ${{ inputs.AWS_REGION }}
         AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
