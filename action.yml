@@ -35,6 +35,7 @@ runs:
   steps:
     # Remove any slashes from branch ref so that previews are not nested in subfolders
     - name: Flatten ref
+      shell: bash
       if: inputs.IS_RELEASE != 'true'
       id: flatten_ref
       env:
@@ -42,16 +43,21 @@ runs:
       run: echo "flattened_ref=${ref/\//--}" >> $GITHUB_OUTPUT
 
     - uses: actions/checkout@v4
+      shell: bash
       if: github.event.action != 'closed'
     - uses: actions/setup-node@v4
+      shell: bash
       if: github.event.action != 'closed'
     - run: npm install
+      shell: bash
       if: github.event.action != 'closed'
       env:
         NPM_AUTH_TOKEN: ${{ inputs.NPM_AUTH_TOKEN }}
     - run: npm run build
+      shell: bash
       if: github.event.action != 'closed'
     - name: Deploy preview to S3
+      shell: bash
       uses: leviat-tech/github-action-push-to-aws@v0.0.13
       if: github.event.action != 'closed'
       with:
@@ -65,14 +71,18 @@ runs:
 
     - name: Add link to PR
       if: github.event.action == 'closed'
+      needs: flatten_ref
+      shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
         PREVIEW_URL: https://test.leviatdesignstudio.com/configurators/id/${{ inputs.PLUGIN_NAME }}/?preview=${{ needs.flatten_ref.outputs.flattened_ref }}
       run: gh pr comment ${{ github.event.number }} --body "Deployment successful. This branch can be previewed at [$PREVIEW_URL]($PREVIEW_URL)"
 
     - name: Delete preview folder from S3
-      uses: leviat-tech/github-action-push-to-aws@v0.0.13
       if: github.event.action == 'closed'
+      shell: bash
+      uses: leviat-tech/github-action-push-to-aws@v0.0.13
+      needs: flatten_ref
       with:
         AWS_REGION: ${{ inputs.AWS_REGION }}
         AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
