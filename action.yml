@@ -80,7 +80,7 @@ runs:
         PREVIEW_URL: https://test.leviatdesignstudio.com/configurators/id/${{ inputs.PLUGIN_NAME }}/?preview=${{ env.FLATTENED_REF }}
       run: |
         gh pr comment ${{ github.event.number }} \
-        --body "Deployment successful. This branch can be previewed at:
+        --body "Deployment successful. :rocket: This branch can be previewed at:
         
         [$PREVIEW_URL]($PREVIEW_URL)"
 
