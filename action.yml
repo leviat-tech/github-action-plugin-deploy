@@ -40,7 +40,7 @@ runs:
       id: flatten_ref
       env:
         ref: ${{ github.head_ref }}
-      run: echo "flattened_ref=${ref/\//--}" >> $GITHUB_OUTPUT
+      run: echo "FLATTENED_REF=${ref/\//--}" >> $GITHUB_ENV
 
     - uses: actions/checkout@v4
       if: github.event.action != 'closed'
@@ -56,7 +56,6 @@ runs:
       if: github.event.action != 'closed'
     - name: Deploy preview to S3
       if: github.event.action != 'closed'
-      needs: flatten_ref
       uses: leviat-tech/github-action-push-to-aws@v0.0.13
       with:
         AWS_REGION: ${{ inputs.AWS_REGION }}
@@ -64,27 +63,25 @@ runs:
         AWS_ACCESS_KEY_SECRET: ${{ inputs.AWS_ACCESS_KEY_SECRET }}
         ACTION_TYPE: S3
         S3_FOLDER_HERE: ./project/dist
-        S3_FOLDER_THERE: ${{ inputs.IS_RELEASE == 'true' && inputs.AWS_S3_BUCKET_PATH || format('{0}/previews/{1}',  inputs.AWS_S3_BUCKET_PATH, needs.flatten_ref.outputs.flattened_ref) }}
+        S3_FOLDER_THERE: ${{ inputs.IS_RELEASE == 'true' && inputs.AWS_S3_BUCKET_PATH || format('{0}/previews/{1}',  inputs.AWS_S3_BUCKET_PATH, env.FLATTENED_REF) }}
         S3_CREATE_INDEX: true
 
     - name: Add link to PR
       if: github.event.action == 'closed'
-      needs: flatten_ref
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-        PREVIEW_URL: https://test.leviatdesignstudio.com/configurators/id/${{ inputs.PLUGIN_NAME }}/?preview=${{ needs.flatten_ref.outputs.flattened_ref }}
+        PREVIEW_URL: https://test.leviatdesignstudio.com/configurators/id/${{ inputs.PLUGIN_NAME }}/?preview=${{ env.FLATTENED_REF }}
       run: gh pr comment ${{ github.event.number }} --body "Deployment successful. This branch can be previewed at [$PREVIEW_URL]($PREVIEW_URL)"
 
     - name: Delete preview folder from S3
       if: github.event.action == 'closed'
       uses: leviat-tech/github-action-push-to-aws@v0.0.13
-      needs: flatten_ref
       with:
         AWS_REGION: ${{ inputs.AWS_REGION }}
         AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
         AWS_ACCESS_KEY_SECRET: ${{ inputs.AWS_ACCESS_KEY_SECRET }}
         ACTION_TYPE: S3
-        S3_FOLDER_THERE: ${{ inputs.AWS_S3_BUCKET_PATH }}/previews/${{ needs.flatten_ref.outputs.flattened_ref }}
+        S3_FOLDER_THERE: ${{ inputs.AWS_S3_BUCKET_PATH }}/previews/${{ env.FLATTENED_REF }}
         S3_CREATE_INDEX: true
         S3_CLEAR_ONLY: true
