@@ -64,14 +64,13 @@ runs:
       run: |
         if [ -n "${{ inputs.NPM_BUILD_ENV }}" ]; then
           echo "${{ inputs.NPM_BUILD_ENV }}" | while read -r line; do
-            export "$line"
+            echo "$line" >> $GITHUB_ENV
           done
         fi
 
     - run: npm run build
       shell: bash
       working-directory: project
-      env: ${{ env }}
       if: github.event.action != 'closed'
 
     - name: Deploy preview to S3
