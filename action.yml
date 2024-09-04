@@ -29,6 +29,10 @@ inputs:
     description: 'Auth token to install private dependencies'
     required: true
     default: ''
+  NPM_BUILD_ENV:
+    description: 'Additional env vars if required for npm build command'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -55,9 +59,19 @@ runs:
       env:
         NPM_AUTH_TOKEN: ${{ inputs.NPM_AUTH_TOKEN }}
 
+    - name: Setup build env
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.NPM_BUILD_ENV }}" ]; then
+          echo "${{ inputs.NPM_BUILD_ENV }}" | while read -r line; do
+            export "$line"
+          done
+        fi
+
     - run: npm run build
       shell: bash
       working-directory: project
+      env: ${{ env }}
       if: github.event.action != 'closed'
 
     - name: Deploy preview to S3
